@@ -112,13 +112,13 @@ main{padding:10px 10px 90px}
 .pie{border-top:2px solid var(--cyan)!important;position:fixed;left:0;right:0;bottom:0;padding:6px 12px calc(6px + env(safe-area-inset-bottom,0px));background:var(--panel);border-top:1px solid var(--line);font-size:.75rem;color:var(--muted);display:flex;justify-content:space-between;z-index:10}
 .tabs{display:flex;gap:6px;margin-top:8px}.tabs button{flex:1;border:1px solid var(--line);background:var(--blue-soft);color:var(--blue);border-radius:10px;padding:7px;font-weight:700;font-size:.9rem}.tabs button.on{background:var(--blue);border-color:var(--blue);color:#fff}
 .rcus{display:flex;gap:6px;padding:4px 0}.rcus input{flex:1;min-width:0;padding:7px;border:1px solid var(--line);border-radius:8px;font-size:16px}
-.st{display:grid;gap:12px}.st-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;box-shadow:var(--shadow)}
+.st{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;max-width:100%}.st-card{min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;box-shadow:var(--shadow)}
 .st-card h2{margin:0 0 2px;font-size:1rem;color:var(--blue)}.ex{margin:0 0 10px;color:var(--muted);font-size:.82rem}
-.stbar{display:flex;gap:6px;flex-wrap:wrap}.kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.kpi{border:1px solid var(--line);border-radius:12px;padding:9px 10px;background:var(--blue-soft)}.kpi b{display:block;font-size:1.3rem;line-height:1.15;color:var(--blue)}.kpi small{color:var(--muted);font-size:.74rem}
+.stbar{display:flex;gap:6px;flex-wrap:wrap}.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.kpi{min-width:0;overflow-wrap:anywhere;border:1px solid var(--line);border-radius:12px;padding:9px 10px;background:var(--blue-soft)}.kpi b{display:block;font-size:1.3rem;line-height:1.15;color:var(--blue)}.kpi small{color:var(--muted);font-size:.74rem}
 .kpi.g b{color:#15803D}.kpi.r b{color:#C62828}.kpi.y b{color:#B45309}
 .chartwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}.chartwrap svg{display:block}
-.hr{margin:0 0 10px}.hl{display:flex;justify-content:space-between;gap:8px;font-size:.86rem}.hl span{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hr{margin:0 0 10px}.hl{display:flex;justify-content:space-between;gap:8px;font-size:.86rem}.hl span{min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hb{height:12px;background:#DCEAF5;border-radius:6px;position:relative;overflow:hidden;margin-top:3px}.hb i{display:block;height:100%;border-radius:6px}.hb u{position:absolute;top:0;bottom:0;width:2px;background:#C62828}.hr small{color:var(--muted);font-size:.74rem}
 table.dt{width:100%;min-width:560px;border-collapse:collapse;font-size:.82rem}.dt th{text-align:left;color:var(--muted);font-size:.72rem;text-transform:uppercase;padding:4px 6px;border-bottom:2px solid var(--line)}.dt td{padding:6px;border-bottom:1px solid var(--line);vertical-align:middle}
 .plate.sm{font-size:.95rem;padding:0 6px;border-width:1.5px}.sq{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:10px;margin:0 0 8px;text-transform:uppercase}
@@ -438,13 +438,13 @@ function proc(v){
   const ops=(v.operadores||[]).map(shortOp),pu=String((et.ingreso_puerta&&et.ingreso_puerta.p)||v.puerta_asignada||'');
   return{placa:v.placa,dia:v.dia,turno:v.turno||'',ops,op:ops.join(', ')||'Sin operador',bls:(v.bls||[]).join(' '),dos:(v.delivery_orders||[]).join(' '),pu:PT[pu]||(pu?'P'+pu:''),
     ip,fin,perm,cur:!!ip&&perm==null&&v.estado==='en_proceso',ea:v.etapa_actual,dd,ven:+v.llamados_vencidos||0,cv:!!v.fue_vencida,hab:!!v.habilitada_antes,sf:!!v.salida_forzada}}
-function chartV(it,o){o=o||{};const n=it.length,W=Math.max(340,n*(o.bw||38)+44),H=210,pt=24,pb=42,pl=34,pr=8,L=o.limit||0;
+function chartV(it,o){o=o||{};const n=it.length,W=Math.max(320,n*(o.bw||34)+44),H=210,pt=24,pb=42,pl=34,pr=8,L=o.limit||0;
   const mx=Math.max(L,...it.map(i=>i.v||0),1)*1.12,ih=H-pt-pb,st=(W-pl-pr)/n,b=Math.min(26,st*.68),y=v=>pt+ih-v/mx*ih;
   const raw=mx/4,mg=10**Math.floor(Math.log10(raw)),sp=[1,2,2.5,5,10].find(s=>s*mg>=raw)*mg;let g='';
   for(let t=0;t<=mx;t+=sp)g+=`<line x1="${pl}" x2="${W-pr}" y1="${y(t)}" y2="${y(t)}" stroke="#D3E3F0"/><text x="${pl-4}" y="${y(t)+4}" text-anchor="end" font-size="10" fill="#52708E">${Math.round(t)}</text>`;
   const bars=it.map((i,k)=>{const cx=pl+st*k+st/2;return(i.v==null?`<text x="${cx}" y="${y(0)-4}" text-anchor="middle" font-size="11" fill="#7F97AE">–</text>`:`<rect x="${cx-b/2}" y="${y(i.v)}" width="${b}" height="${Math.max(1,y(0)-y(i.v))}" rx="3" style="fill:${i.c}"/><text x="${cx}" y="${y(i.v)-4}" text-anchor="middle" font-size="11" font-weight="700" fill="#0A2F5C">${Math.round(i.v)}</text>`)+`<text x="${cx}" y="${H-pb+14}" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0A2F5C">${i.l}</text><text x="${cx}" y="${H-pb+27}" text-anchor="middle" font-size="9.5" fill="#52708E">${i.s||''}</text>`}).join('');
   const lim=L?`<line x1="${pl}" x2="${W-pr}" y1="${y(L)}" y2="${y(L)}" stroke="#C62828" stroke-width="1.5" stroke-dasharray="5 4"/><text x="${W-pr-2}" y="${y(L)-4}" text-anchor="end" font-size="10" font-weight="700" fill="#C62828" style="paint-order:stroke;stroke:#fff;stroke-width:3px">Límite ${L} min</text>`:'';
-  return `<div class="chartwrap"><svg viewBox="0 0 ${W} ${H}" style="width:${W>340?W+'px':'100%'}" role="img">${g}${bars}${lim}</svg></div>`}
+  return `<div class="chartwrap"><svg viewBox="0 0 ${W} ${H}" style="width:${W>320?W+'px':'100%'}" role="img">${g}${bars}${lim}</svg></div>${W>320?'<p class="ex noprint" style="margin:4px 0 0">↔ Desliza el gráfico para ver todas las barras.</p>':''}`}
 const hrows=(rows,mx,L)=>rows.map(r=>`<div class="hr"><div class="hl"><span>${esc(r.l)}</span><b class="mono">${r.r}</b></div><div class="hb"><i style="width:${Math.max(2,r.v/mx*100)}%;background:${r.c}"></i>${L?`<u style="left:${L/mx*100}%"></u>`:''}</div>${r.s?`<small>${r.s}</small>`:''}</div>`).join('');
 const sin=t=>`<div class="vacio">${t}</div>`;
 function estTxt(r,L,now){if(r.perm!=null){const c=clase(r.perm,L);return[{tiempo:'En tiempo',media:'Pasó la mitad',total:'Excedido'}[c],c]}
