@@ -416,7 +416,7 @@ async function toggleWake(){
 }
 
 /* ---------- ESTADÍSTICAS (solo consulta) ---------- */
-let vista='vivo',RNG='hoy',RD={d:'',h:''},ST=null,stTok=0,stErr='',stLoad=false,stQ='',stSort='rec',stShow=100,hrMode='prom';
+let lastSt='',vista='vivo',RNG='hoy',RD={d:'',h:''},ST=null,stTok=0,stErr='',stLoad=false,stQ='',stSort='rec',stShow=100,hrMode='prom';
 const RNGS=[['hoy','Hoy'],['ayer','Ayer'],['7','7 días'],['30','30 días'],['mes','Este mes'],['rango','Fechas']];
 const COL={tiempo:'var(--ok)',media:'var(--c-media)',total:'var(--c-total)'};
 const addDias=(s,n)=>{const d=new Date(s+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
@@ -457,7 +457,7 @@ function filasStats(){const L=CFG.perm,now=Date.now(),q=stQ.toLowerCase();
   return `<p class="ex">${rs.length} vehículo${rs.length===1?'':'s'}</p><div class="chartwrap"><table class="dt"><thead><tr><th>Placa</th><th>Día</th><th>Operador</th><th>Entra</th><th>Sale</th><th>Permanencia</th><th>Estado</th></tr></thead><tbody>${tr||'<tr><td colspan="7" class="vacio">Sin resultados</td></tr>'}</tbody></table></div>${rs.length>stShow?`<button class="chip sel" data-a="more">Ver más (${rs.length-stShow})</button>`:''}`}
 function pintarStats(){
   const bx=$('#statsView');if(!bx)return;
-  if(!ST){bx.innerHTML=stErr?`<div class="vacio">No se pudieron cargar los datos.<br><small>${esc(stErr)}</small><br><br><button class="chip sel" data-a="re">Reintentar</button></div>`:sin('Cargando estadísticas…');return}
+  if(!ST){lastSt='';bx.innerHTML=stErr?`<div class="vacio">No se pudieron cargar los datos.<br><small>${esc(stErr)}</small><br><br><button class="chip sel" data-a="re">Reintentar</button></div>`:sin('Cargando estadísticas…');return}
   const L=CFG.perm,now=Date.now(),R=ST.recs,Hh=R.filter(r=>r.perm!=null),Cu=R.filter(r=>r.cur),P=Hh.map(r=>r.perm),nH=Hh.length;
   const cl={tiempo:0,media:0,total:0};Hh.forEach(r=>cl[clase(r.perm,L)]++);
   const pc=k=>nH?Math.round(cl[k]/nH*100):0,cuExc=Cu.filter(r=>(now-r.ip)/6e4>=L).length;
@@ -472,9 +472,9 @@ function pintarStats(){
   const oo=Object.entries(BO).sort((a,b)=>b[1].length-a[1].length).slice(0,10).map(([o,a])=>{const v=avg(a),e=a.filter(x=>x>=L).length;return{l:o,v,c:COL[clase(v,L)],r:dur(v),s:a.length+' veh. · '+e+' excedido'+(e===1?'':'s')}});
   const omx=Math.max(L*1.1,...oo.map(o=>o.v)),k=(v,t,c)=>`<div class="kpi ${c||''}"><b>${v}</b><small>${t}</small></div>`,cnt=f=>R.filter(f).length;
   const cuad=[['tiempo','En tiempo (menos de '+dur(L/2)+')'],['media','Pasó la mitad ('+dur(L/2)+' a '+dur(L)+')'],['total','Excedido (más de '+dur(L)+')']].map(([c,t])=>({l:t,v:pc(c),c:COL[c],r:cl[c]+' · '+pc(c)+'%'}));
-  bx.innerHTML=`<div class="phead"><img src="logo.png" alt="">Reporte de permanencias</div>
+  const html=`<div class="phead"><img src="logo.png" alt="">Reporte de permanencias</div>
   <div class="stbar noprint"><button class="chip" data-a="ref">↻ Actualizar</button><button class="chip" data-a="csv">⬇ Excel (CSV)</button><button class="chip" data-a="pdf">📄 PDF</button></div>
-  <p class="ex">Del ${fd(ST.d)} al ${fd(ST.h)} · actualizado ${fHMS(ST.t)}${stLoad?' · actualizando…':''}</p>
+  <p class="ex">Del ${fd(ST.d)} al ${fd(ST.h)} · <span id="stUp"></span></p>
   <div class="kpis">${k(R.length,'Vehículos registrados')}${k(nH,'Con ciclo completo')}${k(nH?dur(avg(P)):'—','Permanencia promedio')}${k(nH?dur(med(P)):'—','Mediana (el vehículo típico)')}${k(nH?dur(Math.max(...P)):'—','Permanencia máxima','r')}${k(nH?(pc('tiempo')+pc('media'))+'%':'—','Cumplen el límite de '+dur(L),'g')}${k(cl.total,'Excedieron el límite','r')}${k(Cu.length,'En curso ahora'+(cuExc?' ('+cuExc+' ya excedidos)':''),'y')}</div>
   <section class="st-card"><h2>Novedades operativas</h2><div class="kpis">${k(cnt(r=>r.cv),'Citas vencidas')}${k(R.reduce((s,r)=>s+r.ven,0),'Llamados vencidos')}${k(cnt(r=>r.sf),'Salidas forzadas')}${k(cnt(r=>r.hab),'Habilitados antes de hora')}</div></section>
   <section class="st-card"><h2>Cumplimiento del límite</h2><p class="ex">Permanencia = de que entra por puerta hasta que sale. Solo vehículos con ciclo completo${nH?'; 9 de cada 10 salen en menos de '+dur([...P].sort((a,b)=>a-b)[Math.max(0,Math.ceil(nH*.9)-1)]):''}.</p>${nH?hrows(cuad,100):sin('Aún no hay vehículos con ciclo completo en este rango.')}</section>
@@ -484,11 +484,14 @@ function pintarStats(){
   <section class="st-card"><h2>Tiempo por etapa</h2><p class="ex">Promedio que pasan los vehículos en cada etapa.${slow?' La etapa más lenta del ciclo es '+slow.l+' ('+dur(slow.v)+').':''}</p>${SE.length?hrows(SE.map(s=>({l:s.l,v:s.v,c:slow&&s.k===slow.k?'var(--yellow)':'var(--blue)',r:dur(s.v),s:s.n+' registros'})),smx):sin('Sin datos.')}</section>
   <section class="st-card"><h2>Por operador</h2><p class="ex">Los 10 con más vehículos. Barra = permanencia promedio; la marca roja es el límite.</p>${oo.length?hrows(oo,omx,L):sin('Sin datos.')}</section>
   <section class="st-card"><h2>Detalle de vehículos</h2><div class="stbar noprint" style="margin-bottom:8px"><button class="chip${stSort==='rec'?' sel':''}" data-a="so-rec">Recientes</button><button class="chip${stSort==='max'?' sel':''}" data-a="so-max">Mayor permanencia</button><button class="chip${stSort==='exc'?' sel':''}" data-a="so-exc">Solo excedidos</button></div>
-   <input class="sq noprint" id="sq" type="search" placeholder="Placa, BL, DO u operador" value="${esc(stQ)}" autocomplete="off"><div id="stRows">${filasStats()}</div></section>`}
+   <input class="sq noprint" id="sq" type="search" placeholder="Placa, BL, DO u operador" value="${esc(stQ)}" autocomplete="off"><div id="stRows">${filasStats()}</div></section>`;
+  if(html!==lastSt){const y=window.scrollY,sl=[...bx.querySelectorAll('.chartwrap')].map(e=>e.scrollLeft);bx.innerHTML=html;lastSt=html;bx.querySelectorAll('.chartwrap').forEach((e,i)=>{e.scrollLeft=sl[i]||0});window.scrollTo(0,y)}
+  setUp()}
+function setUp(){const e=$('#stUp');if(e&&ST)e.textContent='actualizado '+fHMS(ST.t)+(stLoad?' · actualizando…':'')}
 async function cargarStats(force,silent){
   const[d,h]=rango(),key=d+'|'+h;
   if(!force&&ST&&ST.key===key&&Date.now()-ST.t<60000){pintarStats();return}
-  const tok=++stTok;stLoad=true;stErr='';if(ST&&ST.key!==key)ST=null;if(!silent||!ST)pintarStats();
+  const tok=++stTok;stLoad=true;stErr='';if(ST&&ST.key!==key)ST=null;if(!ST)pintarStats();else setUp();
   try{const rows=await traerStats(d,h);if(tok!==stTok)return;ST={key,d,h,t:Date.now(),recs:rows.map(proc)}}
   catch(e){if(tok!==stTok)return;console.warn(e);stErr=e.message||'Error'}
   stLoad=false;pintarStats()}
