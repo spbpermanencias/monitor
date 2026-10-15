@@ -1,7 +1,7 @@
 {
   "name": "Monitor SPB · Admin",
   "short_name": "Monitor SPB",
-  "description": "Monitor de permanencias en tiempo real (solo administrador)",
+  "description": "Monitor de permanencias en tiempo real y estadísticas (solo administrador)",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
